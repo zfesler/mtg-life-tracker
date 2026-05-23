@@ -736,6 +736,7 @@ input[type=range]::-moz-range-thumb {
     <button class="btn" id="global-settings-btn">⚙ Settings</button>
     <button class="btn" id="dice-open-btn">🎲 Dice</button>
     <button class="btn btn-gold" id="history-toggle-btn">History</button>
+    <button class="btn btn-gold" id="rematch-btn">↺ Rematch</button>
     <button class="btn btn-danger" id="reset-btn">New Game</button>
   </div>
 </header>
@@ -1436,6 +1437,33 @@ function renderHistory() {
   document.getElementById('history-entries').innerHTML=
     state.history.slice(0,25).map(e=>`<span class="history-entry">${e}</span>`).join('');
 }
+
+/* ═══════════════════════════════════════
+   REMATCH (keep names & colors, reset game state)
+═══════════════════════════════════════ */
+document.getElementById('rematch-btn').addEventListener('click', () => {
+  if (!state.players.length) return;
+
+  // Reset each player's game state, preserving name and color
+  state.players.forEach((p, i) => {
+    p.life = state.startingLife;
+    p.counters = makeCounters();
+    p.cmdDmg = Array(state.playerCount).fill(0);
+  });
+
+  // Reset match-level state
+  state.history = [];
+  state.playerShowCmd = Array(state.playerCount).fill(false);
+  COUNTERS.forEach(ct => { state.globalEnabledCounters[ct.id] = false; });
+
+  document.getElementById('history-bar').classList.remove('visible');
+  renderGrid();
+
+  // Brief flash to confirm reset
+  const btn = document.getElementById('rematch-btn');
+  btn.textContent = '✓ Reset!';
+  setTimeout(() => { btn.textContent = '↺ Rematch'; }, 1200);
+});
 
 /* ═══════════════════════════════════════
    RESET APP STATE
