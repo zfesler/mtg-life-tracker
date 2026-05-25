@@ -185,7 +185,7 @@ header h1 {
 }
 .player-name {
   font-family: 'Cinzel', serif;
-  font-size: 16px;
+  font-size: 18px;
   letter-spacing: 0.12em;
   color: rgba(255,255,255,0.70);
   cursor: pointer;
@@ -193,6 +193,7 @@ header h1 {
   transition: color 0.15s;
   min-width: 40px;
   text-align: center;
+  padding: 6px 10px;
 }
 .player-name:hover { color: #fff; border-bottom-color: rgba(255,255,255,0.3); }
 .player-name-input {
@@ -210,8 +211,8 @@ header h1 {
 
 /* Color swatch */
 .color-swatch {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.40);
   cursor: pointer;
@@ -219,7 +220,7 @@ header h1 {
   transition: transform 0.15s, border-color 0.15s;
   box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
 }
-.color-swatch:hover { transform: scale(1.35); border-color: #fff; }
+.color-swatch:hover { transform: scale(1.25); border-color: #fff; }
 
 /* Life area */
 .life-area {
@@ -229,14 +230,18 @@ header h1 {
   align-items: center;
   gap: 10px;
 }
+/* Life button groups */
+.life-btns-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
 .life-btn {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
+  border-radius: 40px;
   background: rgba(255,255,255,0.06);
   border: 2px solid rgba(255,255,255,0.18);
   color: rgba(255,255,255,0.55);
-  font-size: 38px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -245,6 +250,18 @@ header h1 {
   flex-shrink: 0;
   line-height: 1;
   font-family: 'Cinzel', serif;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.life-btn-lg {
+  width: 88px;
+  height: 52px;
+  font-size: 22px;
+}
+.life-btn-sm {
+  width: 72px;
+  height: 44px;
+  font-size: 18px;
 }
 .life-btn:hover { background: rgba(255,255,255,0.16); color: #fff; border-color: rgba(255,255,255,0.5); }
 .life-btn:active { transform: scale(0.86); }
@@ -290,7 +307,8 @@ header h1 {
 [data-players="5"] .life-num { font-size: 96px; }
 [data-players="6"] .life-num { font-size: 84px; }
 
-[data-players="5"] .life-btn, [data-players="6"] .life-btn { width: 56px; height: 56px; font-size: 28px; }
+[data-players="5"] .life-btn-lg, [data-players="6"] .life-btn-lg { width: 70px; height: 42px; font-size: 18px; }
+[data-players="5"] .life-btn-sm, [data-players="6"] .life-btn-sm { width: 58px; height: 36px; font-size: 15px; }
 [data-players="5"] .life-num-wrap, [data-players="6"] .life-num-wrap { min-width: 110px; }
 
 /* Sub counters */
@@ -324,13 +342,13 @@ header h1 {
 
 .counter-row { display: flex; align-items: center; gap: 7px; }
 .mini-btn {
-  width: 28px;
-  height: 28px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.20);
   color: rgba(255,255,255,0.55);
-  font-size: 18px;
+  font-size: 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -434,13 +452,13 @@ header h1 {
 }
 .cmd-dmg-val.at-21 { color: var(--danger); font-weight: 700; }
 .cmd-mini-btn {
-  width: 28px;
-  height: 28px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.20);
   color: rgba(255,255,255,0.55);
-  font-size: 18px;
+  font-size: 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1021,12 +1039,18 @@ function buildPanelHTML(i) {
       <div class="player-name" id="name-display-${i}" data-player="${i}">${p.name}</div>
     </div>
     <div class="life-area">
-      <div class="life-btn" data-player="${i}" data-dir="-1">−</div>
+      <div class="life-btns-group">
+        <div class="life-btn life-btn-sm" data-player="${i}" data-dir="-1">−1</div>
+        <div class="life-btn life-btn-lg" data-player="${i}" data-dir="-10">−10</div>
+      </div>
       <div class="life-num-wrap">
         <span class="life-num${dead?' dead':''}" id="life-${i}" data-player="${i}">${p.life}</span>
         <div class="life-delta" id="delta-${i}"></div>
       </div>
-      <div class="life-btn" data-player="${i}" data-dir="1">+</div>
+      <div class="life-btns-group">
+        <div class="life-btn life-btn-sm" data-player="${i}" data-dir="1">+1</div>
+        <div class="life-btn life-btn-lg" data-player="${i}" data-dir="10">+10</div>
+      </div>
     </div>
     ${hasAnySub ? `<div class="sub-counters">${subHTML}</div>` : ''}
     ${cmdToggleEl}
