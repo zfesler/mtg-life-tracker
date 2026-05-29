@@ -128,10 +128,57 @@ header h1 {
 }
 .life-opt:hover, .life-opt.active { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
 
-/* ── Game Screen ── */
-#game-screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+/* ── Layout rotation ── */
+.player-panel.rotated {
+  transform: rotate(180deg);
+}
+/* Layout preview cards */
+.layout-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: center;
+  min-width: 120px;
+  flex: 1 1 120px;
+  max-width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.layout-card:hover { border-color: var(--gold); background: var(--gold-dim); }
+.layout-card .lc-preview {
+  display: grid;
+  gap: 3px;
+  width: 72px;
+  height: 52px;
+}
+.layout-card .lc-cell {
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+}
+.layout-card .lc-cell.rotated-cell {
+  background: rgba(226,184,78,0.4);
+  border: 1px solid rgba(226,184,78,0.6);
+}
+.layout-card .lc-label {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+.layout-card .lc-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  line-height: 1.3;
+}
+
+#game-screen { flex: 1; display: none; flex-direction: column; min-height: 0; }
 #game-screen.active { display: flex; }
-#players-grid { flex: 1; display: grid; overflow: hidden; }
+#players-grid { flex: 1; display: grid; overflow: hidden; min-height: 0; }
 
 /* ── Grid layouts ── */
 .grid-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
@@ -760,26 +807,39 @@ input[type=range]::-moz-range-thumb {
 </header>
 
 <div id="setup-screen">
-  <h2>New Game</h2>
-  <div class="setup-section">
-    <div class="setup-section-label">Starting Life</div>
-    <div class="life-options">
-      <div class="life-opt active" data-life="20">20</div>
-      <div class="life-opt" data-life="30">30</div>
-      <div class="life-opt" data-life="40">40 (EDH)</div>
-      <div class="life-opt" data-life="60">60</div>
+  <!-- Step 1: Life + Player Count -->
+  <div id="setup-step-1">
+    <h2>New Game</h2>
+    <div class="setup-section">
+      <div class="setup-section-label">Starting Life</div>
+      <div class="life-options">
+        <div class="life-opt active" data-life="20">20</div>
+        <div class="life-opt" data-life="30">30</div>
+        <div class="life-opt" data-life="40">40 (EDH)</div>
+        <div class="life-opt" data-life="60">60</div>
+      </div>
+    </div>
+    <div class="setup-section">
+      <div class="setup-section-label">Players</div>
+      <div class="setup-options">
+        <div class="setup-card" data-count="1"><div class="num">1</div><div class="label">Solo</div></div>
+        <div class="setup-card" data-count="2"><div class="num">2</div><div class="label">Duel</div></div>
+        <div class="setup-card" data-count="3"><div class="num">3</div><div class="label">3-Player</div></div>
+        <div class="setup-card" data-count="4"><div class="num">4</div><div class="label">Commander</div></div>
+        <div class="setup-card" data-count="5"><div class="num">5</div><div class="label">Star / 5P</div></div>
+        <div class="setup-card" data-count="6"><div class="num">6</div><div class="label">6-Player</div></div>
+      </div>
     </div>
   </div>
-  <div class="setup-section">
-    <div class="setup-section-label">Players</div>
-    <div class="setup-options">
-      <div class="setup-card" data-count="1"><div class="num">1</div><div class="label">Solo</div></div>
-      <div class="setup-card" data-count="2"><div class="num">2</div><div class="label">Duel</div></div>
-      <div class="setup-card" data-count="3"><div class="num">3</div><div class="label">3-Player</div></div>
-      <div class="setup-card" data-count="4"><div class="num">4</div><div class="label">Commander</div></div>
-      <div class="setup-card" data-count="5"><div class="num">5</div><div class="label">Star / 5P</div></div>
-      <div class="setup-card" data-count="6"><div class="num">6</div><div class="label">6-Player</div></div>
+
+  <!-- Step 2: Layout Picker -->
+  <div id="setup-step-2" style="display:none; flex-direction:column; align-items:center; gap:32px; width:100%;">
+    <h2>Choose Layout</h2>
+    <div class="setup-section">
+      <div class="setup-section-label">How are you sitting?</div>
+      <div id="layout-options" class="setup-options" style="max-width:700px;"></div>
     </div>
+    <button class="btn" id="layout-back-btn" style="margin-top:4px;">← Back</button>
   </div>
 </div>
 
@@ -895,6 +955,8 @@ const state = {
   history: [],
   colorTarget: -1,
   lifeEditTarget: -1,
+  layout: 'default',       // chosen layout key
+  pendingCount: 0,          // player count chosen before layout step
   
   globalEnabledCounters: {
     poison: false,
@@ -922,8 +984,128 @@ document.querySelectorAll('.life-opt').forEach(btn => {
     state.startingLife = parseInt(btn.dataset.life);
   });
 });
+
+/* ── Layout definitions ─────────────────────
+   Each entry defines which player indices get rotated (180°).
+   "isMobile" layouts are auto-suggested on narrow screens.
+──────────────────────────────────────────── */
+/*
+  Layout grid positions (index order, left-to-right, top-to-bottom):
+    2p:  [0][1]               (1 row, 2 cols)
+    3p:  [0][1]               (top row)
+         [  2  ]              (bottom, spans 2 cols)
+    4p:  [0][1]               (top row)
+         [2][3]               (bottom row)
+    5p:  [0][1][2]            (top row, 3 cols)
+         [ 3][ 4]             (bottom row, centered)
+    6p:  [0][1][2]            (top row)
+         [3][4][5]            (bottom row)
+
+  "rotated" = 180° flip so those players face the opposite direction.
+  Top-row players rotate so they read toward the bottom (facing their opponents).
+  All layouts with rotation have top-row indices listed.
+*/
+const LAYOUTS = {
+  1: [
+    { key:'default', label:'Solo', desc:'Just you', rotated:[] },
+  ],
+  2: [
+    { key:'same-side',  label:'Same Side',    desc:'Both panels face the same way.\nGood for side-by-side on one device.', rotated:[] },
+    { key:'across',     label:'Across Table', desc:'One panel flipped.\nEach player faces their own screen.', rotated:[0] },
+  ],
+  3: [
+    { key:'same-side',  label:'Same Side',    desc:'All panels face the same way.', rotated:[] },
+    { key:'1-vs-2',     label:'1 vs 2',       desc:'Top player faces down.\nBottom two face up toward them.', rotated:[0,1] },
+  ],
+  4: [
+    { key:'same-side',  label:'Same Side',    desc:'All panels face the same way.', rotated:[] },
+    { key:'2-vs-2',     label:'2 vs 2',       desc:'Top two face down, bottom two face up.\nClassic across-the-table setup.', rotated:[0,1] },
+  ],
+  5: [
+    { key:'same-side',  label:'Same Side',    desc:'All panels face the same way.', rotated:[] },
+    { key:'3-vs-2',     label:'3 vs 2',       desc:'Top three face down, bottom two face up.', rotated:[0,1,2] },
+  ],
+  6: [
+    { key:'same-side',  label:'Same Side',    desc:'All panels face the same way.', rotated:[] },
+    { key:'3-vs-3',     label:'3 vs 3',       desc:'Top three face down, bottom three face up.\nPerfect for two teams across a table.', rotated:[0,1,2] },
+  ],
+};
+
+function getRotatedIndices() {
+  const layouts = LAYOUTS[state.playerCount] || [];
+  const layout = layouts.find(l => l.key === state.layout);
+  return layout ? layout.rotated : [];
+}
+
+function isMobileDevice() {
+  return window.innerWidth <= 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+}
+
+function buildLayoutPreviewSVG(count, rotatedIndices) {
+  // Returns a small grid of cells where rotated ones are highlighted
+  const cols = count <= 2 ? count : (count <= 4 ? 2 : 3);
+  const rows = Math.ceil(count / cols);
+  let cells = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = r * cols + c;
+      if (idx >= count) continue;
+      const cls = rotatedIndices.includes(idx) ? 'lc-cell rotated-cell' : 'lc-cell';
+      // Last odd cell in 3-player spans
+      const span = (count === 3 && idx === 2) ? ' style="grid-column:span 2;"' : '';
+      cells += `<div class="${cls}"${span}></div>`;
+    }
+  }
+  const gridStyle = `grid-template-columns:repeat(${cols},1fr);`;
+  return `<div class="lc-preview" style="${gridStyle}">${cells}</div>`;
+}
+
+function showLayoutStep(count) {
+  state.pendingCount = count;
+  const layouts = LAYOUTS[count] || [{ key:'default', label:'Default', desc:'', rotated:[] }];
+
+  // Auto-skip if only one layout option
+  if (layouts.length === 1) {
+    state.layout = layouts[0].key;
+    startGame(count);
+    return;
+  }
+
+  // Auto-suggest mobile layout if on mobile
+  const mobile = isMobileDevice();
+
+  const container = document.getElementById('layout-options');
+  container.innerHTML = layouts.map(lyt => {
+    const preview = buildLayoutPreviewSVG(count, lyt.rotated);
+    const mobileBadge = mobile && lyt.rotated.length > 0
+      ? `<span style="font-size:10px;color:var(--gold);letter-spacing:0.06em;">★ Recommended for mobile</span>`
+      : '';
+    return `<div class="layout-card" data-layout-key="${lyt.key}">
+      ${preview}
+      <div class="lc-label">${lyt.label}</div>
+      <div class="lc-desc">${lyt.desc.replace(/\n/g,'<br>')}</div>
+      ${mobileBadge}
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.layout-card').forEach(card => {
+    card.addEventListener('click', () => {
+      state.layout = card.dataset.layoutKey;
+      startGame(state.pendingCount);
+    });
+  });
+
+  document.getElementById('setup-step-1').style.display = 'none';
+  document.getElementById('setup-step-2').style.display = 'flex';
+}
+
+document.getElementById('layout-back-btn').addEventListener('click', () => {
+  document.getElementById('setup-step-2').style.display = 'none';
+  document.getElementById('setup-step-1').style.display = '';
+});
+
 document.querySelectorAll('.setup-card').forEach(card => {
-  card.addEventListener('click', () => startGame(parseInt(card.dataset.count)));
+  card.addEventListener('click', () => showLayoutStep(parseInt(card.dataset.count)));
 });
 
 /* ═══════════════════════════════════════
@@ -969,9 +1151,10 @@ function renderGrid() {
   grid.className = `grid-${n}`;
   grid.setAttribute('data-players', n);
   grid.innerHTML = '';
+  const rotatedIndices = getRotatedIndices();
   state.players.forEach((_,i) => {
     const panel = document.createElement('div');
-    panel.className = 'player-panel';
+    panel.className = 'player-panel' + (rotatedIndices.includes(i) ? ' rotated' : '');
     panel.id = `panel-${i}`;
     panel.innerHTML = buildPanelHTML(i);
     grid.appendChild(panel);
@@ -1070,7 +1253,7 @@ function applyColor(i) {
   const bg = document.getElementById(`bg-${i}`);
   const sw = document.getElementById(`swatch-${i}`);
   if (!bg||!sw) return;
-  bg.style.background = `radial-gradient(ellipse 80% 80% at 50% 50%, ${hsl(h,s,l)} 0%, ${hsl(h,s,Math.max(10,l-25))} 40%, transparent 100%)`;
+  bg.style.background = hsl(h,s,l);
   bg.style.opacity = p.opacity / 100;
   bg.style.zIndex = 1;
   sw.style.background = hsl(h,s,l);
@@ -1327,8 +1510,7 @@ function drawWheel() {
 }
 
 function updatePreview() {
-  document.getElementById('color-preview').style.background=
-    `linear-gradient(135deg, ${hsl(pickerH,pickerS,pickerL)}, ${hsl(pickerH,pickerS,Math.max(10,pickerL-20))})`;
+  document.getElementById('color-preview').style.background = hsl(pickerH,pickerS,pickerL);
 }
 
 function wheelEventToHue(e, canvas) {
@@ -1497,8 +1679,10 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   document.getElementById('game-header-controls').style.display='none';
   document.getElementById('history-bar').classList.remove('visible');
   document.getElementById('setup-screen').style.display='';
+  document.getElementById('setup-step-1').style.display='';
+  document.getElementById('setup-step-2').style.display='none';
   document.getElementById('players-grid').innerHTML='';
-  state.players=[]; state.history=[];
+  state.players=[]; state.history=[]; state.layout='default';
 });
 </script>
 </body>
